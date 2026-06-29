@@ -13,6 +13,10 @@
 
 ## 开发
 
+开发文档：
+
+- [HaaS UI / Falcon 小程序开发文档](https://www.yuque.com/wcye0k/haasui/)
+
 安装依赖后构建：
 
 ```sh
