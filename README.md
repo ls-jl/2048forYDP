@@ -51,8 +51,4 @@ Copyright (c) 2014 Gabriele Cirulli
 
 ## License
 
-Copyright (c) 2026 ls-jl
-
-Portions based on 2048 Copyright (c) 2014 Gabriele Cirulli.
-
 MIT. See [LICENSE](LICENSE).
