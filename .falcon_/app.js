@@ -249,8 +249,8 @@ App$1.meta = {
     }
   }
 };
-App$1.meta.name = '_2048forYDP';
-App$1.meta.version = '1.0.0';
+App$1.meta.name = '2048';
+App$1.meta.version = '0.1.1';
 App$1.meta.isSingleJsBundle = false;
 $falcon.__AppClazz = App$1;
 $falcon.__loadModuleDefault = async function (fileName) {

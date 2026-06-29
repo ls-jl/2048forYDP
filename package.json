@@ -1,8 +1,9 @@
 {
-  "name": "_2048forYDP",
+  "name": "2048",
   "appid": "8001782735702492",
-  "version": "1.0.0",
-  "description": "hello",
+  "version": "0.1.1",
+  "description": "2048 for YDP",
+  "icon": "icon.png",
   "quickjs": {
     "version": "20200705",
     "bigNum": false

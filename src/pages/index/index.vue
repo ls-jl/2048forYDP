@@ -1,76 +1,215 @@
 <template>
   <div class="game-page" :style="pageStyle">
-    <div class="game-shell" :style="shellStyle">
-      <div class="top-panel" :style="topPanelStyle">
-        <text class="title" :style="titleStyle">2048</text>
-        <div class="scores" :style="scoresStyle">
-          <div class="score-box" :style="scoreBoxStyle">
-            <text class="score-label" :style="scoreLabelStyle">SCORE</text>
-            <text class="score-value" :style="scoreValueStyle">{{ score }}</text>
-            <text v-if="scoreAddition" class="score-addition" :style="scoreAdditionStyle">+{{ scoreAddition }}</text>
-          </div>
-          <div class="score-box" :style="scoreBoxStyle">
-            <text class="score-label" :style="scoreLabelStyle">BEST</text>
-            <text class="score-value" :style="scoreValueStyle">{{ bestScore }}</text>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="game-container"
-        :style="gameContainerStyle"
-        @touchstart="handleTouchStart"
-        @touchmove="handleTouchMove"
-        @touchend="handleTouchEnd"
+    <div class="portrait-stage" :style="stageStyle">
+      <slider
+        ref="verticalSwipe"
+        class="gesture-slider"
+        :style="gestureLayerStyle"
+        :vertical="true"
+        :index="verticalSwipeIndex"
+        :show-indicators="false"
+        :infinite="false"
+        :scrollable="!showMessage"
+        :duration="120"
+        @change="handleVerticalSwipeChange"
       >
-        <div class="grid-container" :style="gridContainerStyle">
-          <div v-for="row in gridRows" :key="row" class="grid-row" :style="gridRowStyle(row)">
-            <div v-for="cell in gridCols" :key="cell" class="grid-cell" :style="gridCellStyle(cell)"></div>
-          </div>
+        <div class="gesture-frame" :style="gestureFrameStyle"></div>
+        <div class="gesture-frame" :style="gestureFrameStyle">
+          <slider
+            ref="horizontalSwipe"
+            class="gesture-slider"
+            :style="gestureSliderStyle"
+            :index="horizontalSwipeIndex"
+            :show-indicators="false"
+            :infinite="false"
+            :scrollable="!showMessage"
+            :duration="120"
+            @change="handleHorizontalSwipeChange"
+          >
+            <div class="gesture-frame" :style="gestureFrameStyle"></div>
+            <div class="gesture-frame" :style="gestureFrameStyle"></div>
+            <div class="gesture-frame" :style="gestureFrameStyle"></div>
+          </slider>
         </div>
+        <div class="gesture-frame" :style="gestureFrameStyle"></div>
+      </slider>
 
-        <div class="tile-container" :style="tileContainerStyle">
-          <div v-for="tile in tiles" :key="tile.renderId" :class="tileClass(tile)" :style="tileStyle(tile)">
-            <div class="tile-inner" :style="tileInnerStyle(tile)">
-              <text class="tile-text" :style="tileTextStyle(tile)">{{ tile.value }}</text>
+      <div class="game-shell" :style="shellStyle">
+        <template v-if="layout.isLandscape">
+          <div class="side-panel side-panel-left" :style="sidePanelStyle">
+            <div v-if="controlsOnLeft" class="top-panel" :style="topPanelStyle">
+              <text class="title" :style="titleStyle">2048</text>
+              <div class="scores" :style="scoresStyle">
+                <div class="score-box" :style="scoreBoxStyle">
+                  <text class="score-label" :style="scoreLabelStyle">SCORE</text>
+                  <text class="score-value" :style="scoreValueStyle">{{ score }}</text>
+                  <text v-if="scoreAddition" class="score-addition" :style="scoreAdditionStyle">+{{ scoreAddition }}</text>
+                </div>
+                <div class="score-box" :style="scoreBoxStyle">
+                  <text class="score-label" :style="scoreLabelStyle">BEST</text>
+                  <text class="score-value" :style="scoreValueStyle">{{ bestScore }}</text>
+                </div>
+              </div>
+
+              <div class="main-actions" :style="mainActionsStyle">
+                <text class="action-button" :style="actionButtonStyle" @click="restartGame">新游戏</text>
+                <text class="action-button" :style="actionButtonStyle" @click="toggleSettings">设置</text>
+              </div>
+
+              <div v-if="settingsOpen" class="settings-panel" :style="settingsPanelStyle">
+                <div class="settings-row" :style="settingsRowStyle">
+                  <text class="settings-label" :style="settingsLabelStyle">生成 4 概率</text>
+                  <div class="probability-control" :style="probabilityControlStyle">
+                    <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(-0.05)">-</text>
+                    <text class="probability-value" :style="probabilityValueStyle">{{ probabilityLabel }}</text>
+                    <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(0.05)">+</text>
+                  </div>
+                </div>
+                <div class="settings-row" :style="settingsRowSecondaryStyle">
+                  <text class="settings-label" :style="settingsLabelStyle">左右翻转(仅限横屏)</text>
+                  <div class="probability-control" :style="probabilityControlStyle">
+                    <text class="settings-toggle" :style="settingsToggleStyle" @click="toggleControlsSide">{{ flipLabel }}</text>
+                  </div>
+                </div>
+                <div class="settings-actions" :style="settingsActionsStyle">
+                  <text class="settings-button" :style="settingsButtonStyle" @click="resetBestScore">重置最佳</text>
+                  <text class="settings-button" :style="settingsButtonStyle" @click="clearSavedGame">清除存档</text>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="direction-zone zone-up" :style="zoneUpStyle" @click="move(0)"></div>
-        <div class="direction-zone zone-right" :style="zoneRightStyle" @click="move(1)"></div>
-        <div class="direction-zone zone-down" :style="zoneDownStyle" @click="move(2)"></div>
-        <div class="direction-zone zone-left" :style="zoneLeftStyle" @click="move(3)"></div>
+          <div class="board-panel" :style="boardPanelStyle">
+            <div class="game-container" :style="gameContainerStyle">
+              <image class="grid-image" resize="stretch" :src="boardGridImage" :style="gridImageStyle"></image>
 
-        <div v-if="showMessage" class="game-message" :style="messageStyle">
-          <text class="message-title" :style="messageTitleStyle">{{ messageText }}</text>
-          <div class="message-actions" :style="messageActionsStyle">
-            <text v-if="won && !keepPlaying" class="small-button" :style="smallButtonStyle" @click="continueGame">继续</text>
-            <text class="small-button" :style="smallButtonStyle" @click="restartGame">再试一次</text>
-          </div>
-        </div>
-      </div>
+              <div class="tile-container" :style="tileContainerStyle">
+                <div v-for="tile in tiles" :key="tile.renderId" :class="tileClass(tile)" :style="tileStyle(tile)">
+                  <div class="tile-inner" :style="tileInnerStyle(tile)">
+                    <text class="tile-text" :style="tileTextStyle(tile)">{{ tile.value }}</text>
+                  </div>
+                </div>
+              </div>
 
-      <div class="bottom-panel" :style="bottomPanelStyle">
-        <div class="main-actions" :style="mainActionsStyle">
-          <text class="action-button" :style="actionButtonStyle" @click="restartGame">新游戏</text>
-          <text class="action-button" :style="actionButtonStyle" @click="toggleSettings">设置</text>
-        </div>
-
-        <div v-if="settingsOpen" class="settings-panel" :style="settingsPanelStyle">
-          <div class="settings-row" :style="settingsRowStyle">
-            <text class="settings-label" :style="settingsLabelStyle">生成 4 概率</text>
-            <div class="probability-control" :style="probabilityControlStyle">
-              <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(-0.05)">-</text>
-              <text class="probability-value" :style="probabilityValueStyle">{{ probabilityLabel }}</text>
-              <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(0.05)">+</text>
+              <div v-if="showMessage" class="game-message" :style="messageStyle">
+                <text class="message-title" :style="messageTitleStyle">{{ messageText }}</text>
+                <div class="message-actions" :style="messageActionsStyle">
+                  <text v-if="won && !keepPlaying" class="small-button" :style="smallButtonStyle" @click="continueGame">继续</text>
+                  <text class="small-button" :style="smallButtonStyle" @click="restartGame">再试一次</text>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="settings-actions" :style="settingsActionsStyle">
-            <text class="settings-button" :style="settingsButtonStyle" @click="resetBestScore">重置最佳</text>
-            <text class="settings-button" :style="settingsButtonStyle" @click="clearSavedGame">清除存档</text>
+
+          <div class="side-panel side-panel-right" :style="sidePanelStyle">
+            <div v-if="!controlsOnLeft" class="top-panel" :style="topPanelStyle">
+              <text class="title" :style="titleStyle">2048</text>
+              <div class="scores" :style="scoresStyle">
+                <div class="score-box" :style="scoreBoxStyle">
+                  <text class="score-label" :style="scoreLabelStyle">SCORE</text>
+                  <text class="score-value" :style="scoreValueStyle">{{ score }}</text>
+                  <text v-if="scoreAddition" class="score-addition" :style="scoreAdditionStyle">+{{ scoreAddition }}</text>
+                </div>
+                <div class="score-box" :style="scoreBoxStyle">
+                  <text class="score-label" :style="scoreLabelStyle">BEST</text>
+                  <text class="score-value" :style="scoreValueStyle">{{ bestScore }}</text>
+                </div>
+              </div>
+
+              <div class="main-actions" :style="mainActionsStyle">
+                <text class="action-button" :style="actionButtonStyle" @click="restartGame">新游戏</text>
+                <text class="action-button" :style="actionButtonStyle" @click="toggleSettings">设置</text>
+              </div>
+
+              <div v-if="settingsOpen" class="settings-panel" :style="settingsPanelStyle">
+                <div class="settings-row" :style="settingsRowStyle">
+                  <text class="settings-label" :style="settingsLabelStyle">生成 4 概率</text>
+                  <div class="probability-control" :style="probabilityControlStyle">
+                    <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(-0.05)">-</text>
+                    <text class="probability-value" :style="probabilityValueStyle">{{ probabilityLabel }}</text>
+                    <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(0.05)">+</text>
+                  </div>
+                </div>
+                <div class="settings-row" :style="settingsRowSecondaryStyle">
+                  <text class="settings-label" :style="settingsLabelStyle">左右翻转(仅限横屏)</text>
+                  <div class="probability-control" :style="probabilityControlStyle">
+                    <text class="settings-toggle" :style="settingsToggleStyle" @click="toggleControlsSide">{{ flipLabel }}</text>
+                  </div>
+                </div>
+                <div class="settings-actions" :style="settingsActionsStyle">
+                  <text class="settings-button" :style="settingsButtonStyle" @click="resetBestScore">重置最佳</text>
+                  <text class="settings-button" :style="settingsButtonStyle" @click="clearSavedGame">清除存档</text>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </template>
+
+        <template v-else>
+          <div class="top-panel" :style="topPanelStyle">
+            <text class="title" :style="titleStyle">2048</text>
+            <div class="scores" :style="scoresStyle">
+              <div class="score-box" :style="scoreBoxStyle">
+                <text class="score-label" :style="scoreLabelStyle">SCORE</text>
+                <text class="score-value" :style="scoreValueStyle">{{ score }}</text>
+                <text v-if="scoreAddition" class="score-addition" :style="scoreAdditionStyle">+{{ scoreAddition }}</text>
+              </div>
+              <div class="score-box" :style="scoreBoxStyle">
+                <text class="score-label" :style="scoreLabelStyle">BEST</text>
+                <text class="score-value" :style="scoreValueStyle">{{ bestScore }}</text>
+              </div>
+            </div>
+
+            <div class="main-actions" :style="mainActionsStyle">
+              <text class="action-button" :style="actionButtonStyle" @click="restartGame">新游戏</text>
+              <text class="action-button" :style="actionButtonStyle" @click="toggleSettings">设置</text>
+            </div>
+
+            <div v-if="settingsOpen" class="settings-panel" :style="settingsPanelStyle">
+              <div class="settings-row" :style="settingsRowStyle">
+                <text class="settings-label" :style="settingsLabelStyle">生成 4 概率</text>
+                <div class="probability-control" :style="probabilityControlStyle">
+                  <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(-0.05)">-</text>
+                  <text class="probability-value" :style="probabilityValueStyle">{{ probabilityLabel }}</text>
+                  <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(0.05)">+</text>
+                </div>
+              </div>
+              <div class="settings-row" :style="settingsRowSecondaryStyle">
+                <text class="settings-label" :style="settingsLabelStyle">左右翻转(仅限横屏)</text>
+                <div class="probability-control" :style="probabilityControlStyle">
+                  <text class="settings-toggle" :style="settingsToggleStyle" @click="toggleControlsSide">{{ flipLabel }}</text>
+                </div>
+              </div>
+              <div class="settings-actions" :style="settingsActionsStyle">
+                <text class="settings-button" :style="settingsButtonStyle" @click="resetBestScore">重置最佳</text>
+                <text class="settings-button" :style="settingsButtonStyle" @click="clearSavedGame">清除存档</text>
+              </div>
+            </div>
+          </div>
+
+          <div class="board-panel" :style="boardPanelStyle">
+            <div class="game-container" :style="gameContainerStyle">
+              <image class="grid-image" resize="stretch" :src="boardGridImage" :style="gridImageStyle"></image>
+
+              <div class="tile-container" :style="tileContainerStyle">
+                <div v-for="tile in tiles" :key="tile.renderId" :class="tileClass(tile)" :style="tileStyle(tile)">
+                  <div class="tile-inner" :style="tileInnerStyle(tile)">
+                    <text class="tile-text" :style="tileTextStyle(tile)">{{ tile.value }}</text>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="showMessage" class="game-message" :style="messageStyle">
+                <text class="message-title" :style="messageTitleStyle">{{ messageText }}</text>
+                <div class="message-actions" :style="messageActionsStyle">
+                  <text v-if="won && !keepPlaying" class="small-button" :style="smallButtonStyle" @click="continueGame">继续</text>
+                  <text class="small-button" :style="smallButtonStyle" @click="restartGame">再试一次</text>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </template>
       </div>
     </div>
   </div>
@@ -89,6 +228,7 @@ const MOVE_ANIMATION_MS = 180
 const POP_ANIMATION_MS = 120
 const MOVE_FRAME_COUNT = 7
 const POP_FRAME_COUNT = 5
+const BOARD_GRID_IMAGE = require('./board-grid.png')
 
 const TILE_THEME = {
   2: { background: '#eee4da', color: '#776e65' },
@@ -147,18 +287,28 @@ export default {
       score: 0,
       bestScore: 0,
       scoreAddition: 0,
+      boardGridImage: BOARD_GRID_IMAGE,
       over: false,
       won: false,
       keepPlaying: false,
+      pendingGameOver: false,
       settingsOpen: false,
       fourProbability: DEFAULT_FOUR_PROBABILITY,
+      controlsOnLeft: false,
       nextTileId: 1,
-      touchStartPoint: null,
+      horizontalSwipeIndex: 1,
+      verticalSwipeIndex: 1,
       animationLocked: false,
       layout: {
         deviceWidth: 500,
         deviceHeight: 500,
+        logicalWidth: 500,
+        logicalHeight: 500,
+        shellWidth: 280,
+        sidePanelWidth: 120,
+        isLandscape: false,
         padding: 12,
+        gap: 10,
         boardSize: 280,
         spacing: 10,
         tileSize: 57,
@@ -181,10 +331,27 @@ export default {
     probabilityLabel() {
       return `${Math.round(this.fourProbability * 100)}%`
     },
+    flipLabel() {
+      return this.controlsOnLeft ? '开' : '关'
+    },
     pageStyle() {
       return {
-        width: '100vw',
-        height: '100vh',
+        position: 'relative',
+        width: px(this.layout.deviceWidth),
+        height: px(this.layout.deviceHeight),
+        backgroundColor: '#faf8ef',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }
+    },
+    stageStyle() {
+      return {
+        position: 'absolute',
+        left: '0px',
+        top: '0px',
+        width: px(this.layout.logicalWidth),
+        height: px(this.layout.logicalHeight),
         backgroundColor: '#faf8ef',
         alignItems: 'center',
         justifyContent: 'center',
@@ -192,17 +359,76 @@ export default {
       }
     },
     shellStyle() {
+      const style = {
+        position: 'relative',
+        width: px(this.layout.shellWidth),
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: this.layout.isLandscape ? 'row' : 'column',
+      }
+      if (this.layout.isLandscape) {
+        style.height = px(this.layout.boardSize)
+      }
+      return style
+    },
+    sidePanelStyle() {
       return {
-        width: px(this.layout.boardSize),
+        position: 'relative',
+        width: px(this.layout.sidePanelWidth),
+        height: px(this.layout.boardSize),
         alignItems: 'stretch',
+        justifyContent: 'center',
+      }
+    },
+    boardPanelStyle() {
+      return {
+        position: 'relative',
+        width: px(this.layout.boardSize),
+        height: px(this.layout.boardSize),
+        marginLeft: this.layout.isLandscape ? px(this.layout.gap) : '0px',
+        marginRight: this.layout.isLandscape ? px(this.layout.gap) : '0px',
+        zIndex: this.showMessage ? 7 : 2,
+      }
+    },
+    gestureLayerStyle() {
+      return {
+        position: 'absolute',
+        left: '0px',
+        top: '0px',
+        width: px(this.layout.logicalWidth),
+        height: px(this.layout.logicalHeight),
+        backgroundColor: 'rgba(255, 255, 255, 0)',
+        zIndex: 4,
+      }
+    },
+    gestureSliderStyle() {
+      return {
+        width: px(this.layout.logicalWidth),
+        height: px(this.layout.logicalHeight),
+      }
+    },
+    gestureFrameStyle() {
+      return {
+        position: 'relative',
+        width: px(this.layout.logicalWidth),
+        height: px(this.layout.logicalHeight),
+        backgroundColor: 'rgba(255, 255, 255, 0)',
       }
     },
     topPanelStyle() {
-      return {
-        width: px(this.layout.boardSize),
-        marginBottom: px(this.layout.compact ? 6 : 10),
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const style = {
+        position: 'relative',
+        width: px(width),
         alignItems: 'stretch',
       }
+      if (this.layout.isLandscape) {
+        style.height = px(this.layout.boardSize)
+        style.justifyContent = 'center'
+      } else {
+        style.marginBottom = px(this.layout.compact ? 6 : 10)
+      }
+      return style
     },
     titleStyle() {
       return {
@@ -217,16 +443,18 @@ export default {
       }
     },
     scoresStyle() {
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const gap = this.layout.compact ? 4 : 8
       return {
-        width: px(this.layout.boardSize),
-        height: px(this.scoreBoxHeight()),
-        flexDirection: 'row',
+        width: px(width),
+        height: this.layout.isLandscape ? px(this.scoreBoxHeight() * 2 + gap) : px(this.scoreBoxHeight()),
+        flexDirection: this.layout.isLandscape ? 'column' : 'row',
         justifyContent: 'space-between',
       }
     },
     scoreBoxStyle() {
       const gap = this.layout.compact ? 4 : 8
-      const width = (this.layout.boardSize - gap) / 2
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : (this.layout.boardSize - gap) / 2
       return {
         position: 'relative',
         width: px(width),
@@ -262,7 +490,7 @@ export default {
     scoreAdditionStyle() {
       return {
         position: 'absolute',
-        right: px(Math.max(8, this.layout.boardSize * 0.06)),
+        right: px(Math.max(4, (this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize) * 0.06)),
         top: px(Math.max(2, this.layout.boardSize * 0.02)),
         color: 'rgba(119, 110, 101, 0.9)',
         fontSize: px(this.layout.scoreFont),
@@ -290,6 +518,18 @@ export default {
         zIndex: 1,
       }
     },
+    gridImageStyle() {
+      return {
+        position: 'absolute',
+        left: '0px',
+        top: '0px',
+        width: px(this.layout.boardSize),
+        height: px(this.layout.boardSize),
+        borderRadius: px(Math.max(6, this.layout.spacing * 0.6)),
+        transform: 'translate(0px, 0px)',
+        zIndex: 5,
+      }
+    },
     tileContainerStyle() {
       return {
         position: 'absolute',
@@ -297,28 +537,40 @@ export default {
         top: '0px',
         width: px(this.layout.boardSize),
         height: px(this.layout.boardSize),
-        zIndex: 2,
+        zIndex: 6,
       }
     },
     bottomPanelStyle() {
-      return {
-        width: px(this.layout.boardSize),
-        marginTop: px(this.layout.compact ? 8 : 12),
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const style = {
+        position: 'relative',
+        width: px(width),
         alignItems: 'stretch',
       }
+      if (this.layout.isLandscape) {
+        style.height = px(this.layout.boardSize)
+        style.justifyContent = 'center'
+      } else {
+        style.marginTop = px(this.layout.compact ? 8 : 12)
+      }
+      return style
     },
     mainActionsStyle() {
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
       return {
-        width: px(this.layout.boardSize),
+        width: px(width),
         height: px(this.layout.buttonHeight),
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginTop: px(this.layout.compact ? 4 : 8),
       }
     },
     actionButtonStyle() {
-      const gap = this.layout.compact ? 6 : 10
+      const gap = this.layout.compact ? 4 : 10
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
       return {
-        width: px((this.layout.boardSize - gap) / 2),
+        position: 'relative',
+        width: px((width - gap) / 2),
         height: px(this.layout.buttonHeight),
         lineHeight: px(this.layout.buttonHeight + 2),
         textAlign: 'center',
@@ -328,45 +580,67 @@ export default {
         fontSize: px(this.layout.buttonFont),
         fontWeight: 'bold',
         lines: 1,
+        zIndex: 8,
       }
     },
     settingsPanelStyle() {
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const padding = this.settingsPadding()
       return {
-        width: px(this.layout.boardSize),
-        marginTop: px(this.layout.compact ? 7 : 10),
-        padding: px(Math.max(6, this.layout.spacing)),
+        position: 'relative',
+        width: px(width),
+        marginTop: px(this.layout.compact ? 4 : 10),
+        padding: px(padding),
         backgroundColor: '#eee4da',
         borderRadius: px(Math.max(4, this.layout.spacing * 0.6)),
+        zIndex: 7,
       }
     },
     settingsRowStyle() {
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const padding = this.settingsPadding()
+      const narrowLandscape = this.layout.isLandscape && this.layout.sidePanelWidth < 120
       return {
-        width: px(this.layout.boardSize - Math.max(6, this.layout.spacing) * 2),
-        flexDirection: 'row',
+        width: px(width - padding * 2),
+        flexDirection: narrowLandscape ? 'column' : 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
       }
     },
+    settingsRowSecondaryStyle() {
+      return Object.assign({}, this.settingsRowStyle, {
+        marginTop: px(this.layout.compact ? 4 : 7),
+      })
+    },
     settingsLabelStyle() {
       return {
         color: '#776e65',
-        fontSize: px(Math.max(11, this.layout.buttonFont - 2)),
+        fontSize: px(Math.max(this.layout.isLandscape ? 8 : 11, this.layout.buttonFont - 2)),
         fontWeight: 'bold',
-        lines: 1,
+        lines: 2,
         height: px(this.layout.buttonHeight),
-        lineHeight: px(this.layout.buttonHeight),
+        lineHeight: px(this.layout.buttonHeight / 2),
       }
     },
     probabilityControlStyle() {
-      return {
+      const width = this.layout.isLandscape && this.layout.sidePanelWidth < 120
+        ? this.layout.sidePanelWidth - this.settingsPadding() * 2
+        : undefined
+      const style = {
         flexDirection: 'row',
         height: px(this.layout.buttonHeight),
         alignItems: 'center',
+        justifyContent: 'center',
       }
+      if (width) {
+        style.width = px(width)
+      }
+      return style
     },
     stepperButtonStyle() {
       const size = this.layout.buttonHeight
       return {
+        position: 'relative',
         width: px(size),
         height: px(size),
         lineHeight: px(size),
@@ -377,11 +651,29 @@ export default {
         fontSize: px(this.layout.buttonFont),
         fontWeight: 'bold',
         lines: 1,
+        zIndex: 8,
+      }
+    },
+    settingsToggleStyle() {
+      const width = this.layout.isLandscape ? Math.max(34, this.layout.sidePanelWidth * 0.32) : Math.max(44, this.layout.boardSize * 0.2)
+      return {
+        position: 'relative',
+        width: px(width),
+        height: px(this.layout.buttonHeight),
+        lineHeight: px(this.layout.buttonHeight + 2),
+        textAlign: 'center',
+        color: '#f9f6f2',
+        backgroundColor: '#8f7a66',
+        borderRadius: px(3),
+        fontSize: px(this.layout.buttonFont),
+        fontWeight: 'bold',
+        lines: 1,
+        zIndex: 8,
       }
     },
     probabilityValueStyle() {
       return {
-        width: px(Math.max(42, this.layout.boardSize * 0.18)),
+        width: px(this.layout.isLandscape ? Math.max(24, this.layout.sidePanelWidth * 0.26) : Math.max(42, this.layout.boardSize * 0.18)),
         height: px(this.layout.buttonHeight),
         lineHeight: px(this.layout.buttonHeight),
         color: '#776e65',
@@ -392,40 +684,33 @@ export default {
       }
     },
     settingsActionsStyle() {
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const padding = this.settingsPadding()
       return {
-        width: px(this.layout.boardSize - Math.max(6, this.layout.spacing) * 2),
+        width: px(width - padding * 2),
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: px(this.layout.compact ? 7 : 10),
+        marginTop: px(this.layout.compact ? 4 : 10),
       }
     },
     settingsButtonStyle() {
-      const gap = this.layout.compact ? 6 : 10
-      const panelPadding = Math.max(6, this.layout.spacing)
+      const gap = this.layout.compact ? 4 : 10
+      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
+      const panelPadding = this.settingsPadding()
       return {
-        width: px((this.layout.boardSize - panelPadding * 2 - gap) / 2),
+        position: 'relative',
+        width: px((width - panelPadding * 2 - gap) / 2),
         height: px(this.layout.buttonHeight),
         lineHeight: px(this.layout.buttonHeight + 2),
         textAlign: 'center',
         color: '#f9f6f2',
         backgroundColor: '#8f7a66',
         borderRadius: px(3),
-        fontSize: px(Math.max(10, this.layout.buttonFont - 2)),
+        fontSize: px(Math.max(this.layout.isLandscape ? 8 : 10, this.layout.buttonFont - 2)),
         fontWeight: 'bold',
         lines: 1,
+        zIndex: 8,
       }
-    },
-    zoneUpStyle() {
-      return this.directionZoneStyle('25%', '0px', '50%', '35%')
-    },
-    zoneRightStyle() {
-      return this.directionZoneStyle('65%', '25%', '35%', '50%')
-    },
-    zoneDownStyle() {
-      return this.directionZoneStyle('25%', '65%', '50%', '35%')
-    },
-    zoneLeftStyle() {
-      return this.directionZoneStyle('0px', '25%', '35%', '50%')
     },
     messageStyle() {
       const background = this.over ? 'rgba(238, 228, 218, 0.72)' : 'rgba(237, 194, 46, 0.55)'
@@ -492,7 +777,12 @@ export default {
       this.saveGameState()
     },
     scoreBoxHeight() {
-      return clamp(this.layout.boardSize * 0.16, 34, 62)
+      return this.layout.isLandscape
+        ? clamp(this.layout.boardSize * 0.2, 24, 44)
+        : clamp(this.layout.boardSize * 0.16, 34, 62)
+    },
+    settingsPadding() {
+      return this.layout.isLandscape ? Math.max(3, Math.round(this.layout.spacing * 0.55)) : Math.max(6, this.layout.spacing)
     },
     readDeviceSize() {
       let width = 500
@@ -514,35 +804,66 @@ export default {
     },
     recalculateLayout() {
       const device = this.readDeviceSize()
-      const width = Math.max(120, device.width)
-      const height = Math.max(260, device.height)
-      const compact = width < 260 || height < 430
-      const padding = clamp(width * 0.04, 6, 20)
-      const titleHeight = compact ? 34 : 52
-      const scoreHeight = clamp(width * 0.11, 34, 62)
-      const topReserve = titleHeight + scoreHeight + (compact ? 8 : 14)
-      const actionReserve = clamp(width * 0.12, 30, 44)
-      const settingsReserve = this.settingsOpen ? (compact ? 94 : 118) : 0
-      const bottomReserve = actionReserve + settingsReserve + (compact ? 12 : 20)
-      const byWidth = width - padding * 2
-      const byHeight = height - padding * 2 - topReserve - bottomReserve
-      const candidate = clamp(Math.min(byWidth, byHeight), 96, 500)
-      const spacing = Math.max(4, Math.round(candidate * 15 / 500))
-      const tileSize = Math.max(18, Math.floor((candidate - spacing * (GRID_SIZE + 1)) / GRID_SIZE))
+      const physicalWidth = Math.max(120, device.width)
+      const physicalHeight = Math.max(120, device.height)
+      const width = physicalWidth
+      const height = physicalHeight
+      const isLandscape = width > height
+      const compact = isLandscape ? (height < 260 || width < 420) : (width < 260 || height < 430)
+      const padding = clamp(Math.min(width, height) * 0.04, 6, 20)
+      const gap = clamp(Math.min(width, height) * 0.035, compact ? 4 : 6, 16)
+      let candidate
+      let sidePanelWidth
+
+      if (isLandscape) {
+        const minPanelWidth = compact ? 48 : 72
+        const byHeight = height - padding * 2
+        const byWidth = width - padding * 2 - gap * 2 - minPanelWidth * 2
+        candidate = clamp(Math.min(byWidth, byHeight), 72, 500)
+      } else {
+        const titleHeight = compact ? 34 : 52
+        const scoreHeight = clamp(width * 0.11, 34, 62)
+        const actionReserve = clamp(width * 0.12, 30, 44)
+        const settingsReserve = this.settingsOpen ? (compact ? 122 : 152) : 0
+        const topReserve = titleHeight + scoreHeight + actionReserve + settingsReserve + (compact ? 16 : 24)
+        const bottomReserve = compact ? 8 : 12
+        const byWidth = width - padding * 2
+        const byHeight = height - padding * 2 - topReserve - bottomReserve
+        candidate = clamp(Math.min(byWidth, byHeight), 96, 500)
+      }
+
+      const spacing = Math.max(isLandscape ? 3 : 4, Math.round(candidate * 15 / 500))
+      const tileSize = Math.max(isLandscape ? 12 : 18, Math.floor((candidate - spacing * (GRID_SIZE + 1)) / GRID_SIZE))
       const boardSize = tileSize * GRID_SIZE + spacing * (GRID_SIZE + 1)
+      const panelSource = Math.max(0, (width - padding * 2 - boardSize - gap * 2) / 2)
+
+      if (isLandscape) {
+        sidePanelWidth = clamp(panelSource, compact ? 48 : 72, compact ? 170 : 190)
+      } else {
+        sidePanelWidth = boardSize
+      }
+
+      const shellWidth = isLandscape ? (boardSize + sidePanelWidth * 2 + gap * 2) : boardSize
+      const sideBasis = Math.min(sidePanelWidth, boardSize)
 
       this.layout = {
-        deviceWidth: width,
-        deviceHeight: height,
+        deviceWidth: physicalWidth,
+        deviceHeight: physicalHeight,
+        logicalWidth: width,
+        logicalHeight: height,
+        shellWidth,
+        sidePanelWidth,
+        isLandscape,
         padding,
+        gap,
         boardSize,
         spacing,
         tileSize,
-        titleFont: clamp(boardSize * 0.16, 22, 80),
-        scoreFont: clamp(boardSize * 0.06, 13, 25),
-        scoreLabelFont: clamp(boardSize * 0.032, 8, 13),
-        buttonFont: clamp(boardSize * 0.05, 12, 18),
-        buttonHeight: clamp(boardSize * 0.12, 28, 40),
+        titleFont: isLandscape ? clamp(sideBasis * 0.22, 16, 44) : clamp(boardSize * 0.16, 22, 80),
+        scoreFont: isLandscape ? clamp(sideBasis * 0.08, 10, 20) : clamp(boardSize * 0.06, 13, 25),
+        scoreLabelFont: isLandscape ? clamp(sideBasis * 0.045, 7, 11) : clamp(boardSize * 0.032, 8, 13),
+        buttonFont: isLandscape ? clamp(sidePanelWidth * 0.14, 8, 16) : clamp(boardSize * 0.05, 12, 18),
+        buttonHeight: isLandscape ? clamp(boardSize * 0.18, 22, 34) : clamp(boardSize * 0.12, 28, 40),
         compact,
       }
     },
@@ -554,6 +875,9 @@ export default {
       const settings = parseJson(await this.getStorageValue(SETTINGS_KEY))
       if (settings && typeof settings.fourProbability === 'number') {
         this.fourProbability = clamp(settings.fourProbability, 0, 1)
+      }
+      if (settings && typeof settings.controlsOnLeft === 'boolean') {
+        this.controlsOnLeft = settings.controlsOnLeft
       }
 
       const state = parseJson(await this.getStorageValue(GAME_STATE_KEY))
@@ -579,8 +903,12 @@ export default {
       this.over = !!state.over
       this.won = !!state.won
       this.keepPlaying = !!state.keepPlaying
+      this.pendingGameOver = false
       if (typeof state.fourProbability === 'number') {
         this.fourProbability = clamp(state.fourProbability, 0, 1)
+      }
+      if (typeof state.controlsOnLeft === 'boolean') {
+        this.controlsOnLeft = state.controlsOnLeft
       }
       this.bestScore = Math.max(this.bestScore, Number(state.bestScore) || 0, this.score)
       this.updateTiles()
@@ -594,6 +922,7 @@ export default {
       this.over = false
       this.won = false
       this.keepPlaying = false
+      this.pendingGameOver = false
       for (let index = 0; index < START_TILES; index += 1) {
         this.addRandomTile()
       }
@@ -621,6 +950,15 @@ export default {
       this.fourProbability = next
       this.saveSettings()
       this.saveGameState()
+    },
+    toggleControlsSide(event) {
+      this.preventDefault(event)
+      this.controlsOnLeft = !this.controlsOnLeft
+      this.saveSettings()
+      this.saveGameState()
+      this.$nextTick(() => {
+        this.recalculateLayout()
+      })
     },
     resetBestScore() {
       this.bestScore = 0
@@ -753,13 +1091,17 @@ export default {
       })
 
       if (!moved) {
-        this.updateTiles()
+        if (!this.movesAvailable()) {
+          this.finishGameOver()
+        } else {
+          this.updateTiles()
+        }
         return
       }
 
       this.addRandomTile()
       if (!this.movesAvailable()) {
-        this.over = true
+        this.pendingGameOver = true
       }
       if (this.score > this.bestScore) {
         this.bestScore = this.score
@@ -771,6 +1113,21 @@ export default {
       }
 
       this.playMoveAnimation()
+      if (!this.pendingGameOver) {
+        this.saveGameState()
+      }
+    },
+    finishGameOver() {
+      this.pendingGameOver = false
+      this.over = true
+      this.animationLocked = false
+      this.clearTransientTileFlags()
+      this.updateTiles({
+        includeMergedGhosts: false,
+        hideNewAndMerged: false,
+        popNewAndMerged: false,
+        disableMoveTransition: true,
+      })
       this.saveGameState()
     },
     getVector(direction) {
@@ -946,6 +1303,9 @@ export default {
         })
         this.clearTransientTileFlags()
         this.animationLocked = false
+        if (this.pendingGameOver) {
+          this.finishGameOver()
+        }
         return
       }
 
@@ -1021,6 +1381,7 @@ export default {
         won: this.won,
         keepPlaying: this.keepPlaying,
         fourProbability: this.fourProbability,
+        controlsOnLeft: this.controlsOnLeft,
         updatedAt: Date.now(),
       }
     },
@@ -1036,6 +1397,7 @@ export default {
     async saveSettings() {
       await this.setStorageValue(SETTINGS_KEY, JSON.stringify({
         fourProbability: this.fourProbability,
+        controlsOnLeft: this.controlsOnLeft,
       }))
     },
     async getStorageValue(key) {
@@ -1060,55 +1422,49 @@ export default {
         console.log(`remove storage ${key} failed ${err}`)
       }
     },
-    handleTouchStart(event) {
-      this.touchStartPoint = this.extractPoint(event, false)
-      this.preventDefault(event)
-    },
-    handleTouchMove(event) {
-      this.preventDefault(event)
-    },
-    handleTouchEnd(event) {
-      const start = this.touchStartPoint
-      const end = this.extractPoint(event, true)
-      this.touchStartPoint = null
-      this.preventDefault(event)
-
-      if (!start || !end) {
-        return
+    extractSliderIndex(event) {
+      if (typeof event === 'number') {
+        return event
       }
-
-      const dx = end.x - start.x
-      const dy = end.y - start.y
-      const absDx = Math.abs(dx)
-      const absDy = Math.abs(dy)
-      if (Math.max(absDx, absDy) <= Math.max(10, this.layout.boardSize * 0.04)) {
-        return
-      }
-
-      this.move(absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0))
-    },
-    extractPoint(event, preferChanged) {
       const source = event || {}
-      const data = source.data || {}
-      const touchList = preferChanged ? (source.changedTouches || data.changedTouches) : (source.touches || data.touches)
-      const fallback = source.targetTouches || data.targetTouches
-      let point = null
-
-      if (touchList && touchList.length) {
-        point = touchList[0]
-      } else if (fallback && fallback.length) {
-        point = fallback[0]
-      } else {
-        point = data.clientX !== undefined ? data : source
+      const data = source.data || source.detail || source
+      const index = data.index !== undefined ? data.index : data.value
+      const parsed = Number(index)
+      return Number.isNaN(parsed) ? 1 : parsed
+    },
+    handleHorizontalSwipeChange(event) {
+      const index = this.extractSliderIndex(event)
+      if (index === 1) {
+        return
       }
-
-      if (point && (point.clientX !== undefined || point.pageX !== undefined)) {
-        return {
-          x: Number(point.clientX !== undefined ? point.clientX : point.pageX),
-          y: Number(point.clientY !== undefined ? point.clientY : point.pageY),
+      this.resetHorizontalSwipe()
+      this.move(index < 1 ? 1 : 3)
+    },
+    handleVerticalSwipeChange(event) {
+      const index = this.extractSliderIndex(event)
+      if (index === 1) {
+        return
+      }
+      this.resetVerticalSwipe()
+      this.move(index < 1 ? 2 : 0)
+    },
+    resetHorizontalSwipe() {
+      this.horizontalSwipeIndex = 1
+      this.$nextTick(() => {
+        const slider = this.$refs && this.$refs.horizontalSwipe
+        if (slider && slider.slideTo) {
+          slider.slideTo(1, false)
         }
-      }
-      return null
+      })
+    },
+    resetVerticalSwipe() {
+      this.verticalSwipeIndex = 1
+      this.$nextTick(() => {
+        const slider = this.$refs && this.$refs.verticalSwipe
+        if (slider && slider.slideTo) {
+          slider.slideTo(1, false)
+        }
+      })
     },
     preventDefault(event) {
       if (event && event.preventDefault) {
@@ -1148,7 +1504,7 @@ export default {
         transitionProperty: 'transform',
         transitionDuration: tile.disableMoveTransition ? '0ms' : `${MOVE_ANIMATION_MS}ms`,
         transitionTimingFunction: 'ease-in-out',
-        zIndex: tile.isMerged ? 6 : (tile.isGhost ? 5 : 3),
+        zIndex: tile.isMerged ? 10 : (tile.isGhost ? 9 : 8),
       }
     },
     tileInnerStyle(tile) {
@@ -1196,9 +1552,14 @@ export default {
     },
     gridRowStyle(row) {
       return {
+        position: 'absolute',
+        left: '0px',
+        top: '0px',
         flexDirection: 'row',
+        width: px(this.layout.boardSize - this.layout.spacing * 2),
         height: px(this.layout.tileSize),
-        marginBottom: row === GRID_SIZE - 1 ? '0px' : px(this.layout.spacing),
+        transform: `translate(0px, ${px(row * (this.layout.tileSize + this.layout.spacing))})`,
+        zIndex: 1,
       }
     },
     gridCellStyle(cell) {
@@ -1207,18 +1568,7 @@ export default {
         height: px(this.layout.tileSize),
         marginRight: cell === GRID_SIZE - 1 ? '0px' : px(this.layout.spacing),
         borderRadius: px(Math.max(3, this.layout.tileSize * 0.03)),
-        backgroundColor: 'rgba(238, 228, 218, 0.35)',
-      }
-    },
-    directionZoneStyle(left, top, width, height) {
-      return {
-        position: 'absolute',
-        left,
-        top,
-        width,
-        height,
-        zIndex: 5,
-        backgroundColor: 'rgba(255, 255, 255, 0)',
+        backgroundColor: '#cdc1b4',
       }
     },
   },
@@ -1228,9 +1578,5 @@ export default {
 <style lang="less" scoped>
 .game-page {
   font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
-}
-
-.direction-zone {
-  border-width: 0px;
 }
 </style>

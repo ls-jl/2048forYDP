@@ -1,23 +1,28 @@
 {
-  "appName": "_2048forYDP",
-  "version": "1.0.0",
+  "appName": "2048",
+  "version": "0.1.1",
   "appid": "8001782735702492",
+  "icon": "icon.png",
   "quickjs": {
     "version": "20200705",
     "bigNum": false
   },
   "cert": {
     "app.js": {
-      "size": 5903,
-      "md5": "8e80189959e5a8b301e372c11b14c405"
+      "size": 5896,
+      "md5": "6701d8451ca0afdff3f0a384fdbb4d8a"
+    },
+    "index.js": {
+      "size": 57931,
+      "md5": "ffb8203c5ec4adb04c530c1214dbc99d"
     },
     "page.js": {
       "size": 3136,
       "md5": "6f46ecea7f93fdf7a11bfc502c7b07b9"
     },
-    "index.js": {
-      "size": 40780,
-      "md5": "22d6958bb547030316248034f07f5cb7"
+    "images/9f18a4cae52d62389ce354393b5e1b9f.png": {
+      "size": 2605,
+      "md5": "72b86c7b193a115487b2cbf01a42f6ff"
     }
   }
 }
