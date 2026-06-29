@@ -1,94 +1,17 @@
-<template>
-  <div class="game-page" :style="pageStyle">
-    <div class="game-shell" :style="shellStyle">
-      <div class="top-panel" :style="topPanelStyle">
-        <text class="title" :style="titleStyle">2048</text>
-        <div class="scores" :style="scoresStyle">
-          <div class="score-box" :style="scoreBoxStyle">
-            <text class="score-label" :style="scoreLabelStyle">SCORE</text>
-            <text class="score-value" :style="scoreValueStyle">{{ score }}</text>
-            <text v-if="scoreAddition" class="score-addition" :style="scoreAdditionStyle">+{{ scoreAddition }}</text>
-          </div>
-          <div class="score-box" :style="scoreBoxStyle">
-            <text class="score-label" :style="scoreLabelStyle">BEST</text>
-            <text class="score-value" :style="scoreValueStyle">{{ bestScore }}</text>
-          </div>
-        </div>
-      </div>
+import kvStorage from 'storage';
 
-      <div
-        class="game-container"
-        :style="gameContainerStyle"
-        @touchstart="handleTouchStart"
-        @touchmove="handleTouchMove"
-        @touchend="handleTouchEnd"
-      >
-        <div class="grid-container" :style="gridContainerStyle">
-          <div v-for="row in gridRows" :key="row" class="grid-row" :style="gridRowStyle(row)">
-            <div v-for="cell in gridCols" :key="cell" class="grid-cell" :style="gridCellStyle(cell)"></div>
-          </div>
-        </div>
+//
 
-        <div class="tile-container" :style="tileContainerStyle">
-          <div v-for="tile in tiles" :key="tile.renderId" :class="tileClass(tile)" :style="tileStyle(tile)">
-            <div class="tile-inner" :style="tileInnerStyle(tile)">
-              <text class="tile-text" :style="tileTextStyle(tile)">{{ tile.value }}</text>
-            </div>
-          </div>
-        </div>
-
-        <div class="direction-zone zone-up" :style="zoneUpStyle" @click="move(0)"></div>
-        <div class="direction-zone zone-right" :style="zoneRightStyle" @click="move(1)"></div>
-        <div class="direction-zone zone-down" :style="zoneDownStyle" @click="move(2)"></div>
-        <div class="direction-zone zone-left" :style="zoneLeftStyle" @click="move(3)"></div>
-
-        <div v-if="showMessage" class="game-message" :style="messageStyle">
-          <text class="message-title" :style="messageTitleStyle">{{ messageText }}</text>
-          <div class="message-actions" :style="messageActionsStyle">
-            <text v-if="won && !keepPlaying" class="small-button" :style="smallButtonStyle" @click="continueGame">继续</text>
-            <text class="small-button" :style="smallButtonStyle" @click="restartGame">再试一次</text>
-          </div>
-        </div>
-      </div>
-
-      <div class="bottom-panel" :style="bottomPanelStyle">
-        <div class="main-actions" :style="mainActionsStyle">
-          <text class="action-button" :style="actionButtonStyle" @click="restartGame">新游戏</text>
-          <text class="action-button" :style="actionButtonStyle" @click="toggleSettings">设置</text>
-        </div>
-
-        <div v-if="settingsOpen" class="settings-panel" :style="settingsPanelStyle">
-          <div class="settings-row" :style="settingsRowStyle">
-            <text class="settings-label" :style="settingsLabelStyle">生成 4 概率</text>
-            <div class="probability-control" :style="probabilityControlStyle">
-              <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(-0.05)">-</text>
-              <text class="probability-value" :style="probabilityValueStyle">{{ probabilityLabel }}</text>
-              <text class="stepper-button" :style="stepperButtonStyle" @click="adjustFourProbability(0.05)">+</text>
-            </div>
-          </div>
-          <div class="settings-actions" :style="settingsActionsStyle">
-            <text class="settings-button" :style="settingsButtonStyle" @click="resetBestScore">重置最佳</text>
-            <text class="settings-button" :style="settingsButtonStyle" @click="clearSavedGame">清除存档</text>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script>
-import kvStorage from 'storage'
-
-const GRID_SIZE = 4
-const START_TILES = 2
-const DEFAULT_FOUR_PROBABILITY = 0.1
-const GAME_STATE_KEY = 'ydp-2048-game-state-v1'
-const BEST_SCORE_KEY = 'ydp-2048-best-score-v1'
-const SETTINGS_KEY = 'ydp-2048-settings-v1'
-const MOVE_ANIMATION_MS = 180
-const POP_ANIMATION_MS = 120
-const MOVE_FRAME_COUNT = 7
-const POP_FRAME_COUNT = 5
+const GRID_SIZE = 4;
+const START_TILES = 2;
+const DEFAULT_FOUR_PROBABILITY = 0.1;
+const GAME_STATE_KEY = 'ydp-2048-game-state-v1';
+const BEST_SCORE_KEY = 'ydp-2048-best-score-v1';
+const SETTINGS_KEY = 'ydp-2048-settings-v1';
+const MOVE_ANIMATION_MS = 180;
+const POP_ANIMATION_MS = 120;
+const MOVE_FRAME_COUNT = 7;
+const POP_FRAME_COUNT = 5;
 
 const TILE_THEME = {
   2: { background: '#eee4da', color: '#776e65' },
@@ -102,7 +25,7 @@ const TILE_THEME = {
   512: { background: '#edc850', color: '#f9f6f2' },
   1024: { background: '#edc53f', color: '#f9f6f2' },
   2048: { background: '#edc22e', color: '#f9f6f2' },
-}
+};
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
@@ -113,13 +36,13 @@ function px(value) {
 }
 
 function createEmptyGrid() {
-  const cells = []
+  const cells = [];
   for (let x = 0; x < GRID_SIZE; x += 1) {
-    const column = []
+    const column = [];
     for (let y = 0; y < GRID_SIZE; y += 1) {
-      column.push(null)
+      column.push(null);
     }
-    cells.push(column)
+    cells.push(column);
   }
   return cells
 }
@@ -131,12 +54,12 @@ function parseJson(value) {
   try {
     return JSON.parse(value)
   } catch (err) {
-    console.log(`parse storage failed ${err}`)
+    console.log(`parse storage failed ${err}`);
     return null
   }
 }
 
-export default {
+var script = {
   name: 'index',
   data() {
     return {
@@ -225,8 +148,8 @@ export default {
       }
     },
     scoreBoxStyle() {
-      const gap = this.layout.compact ? 4 : 8
-      const width = (this.layout.boardSize - gap) / 2
+      const gap = this.layout.compact ? 4 : 8;
+      const width = (this.layout.boardSize - gap) / 2;
       return {
         position: 'relative',
         width: px(width),
@@ -316,7 +239,7 @@ export default {
       }
     },
     actionButtonStyle() {
-      const gap = this.layout.compact ? 6 : 10
+      const gap = this.layout.compact ? 6 : 10;
       return {
         width: px((this.layout.boardSize - gap) / 2),
         height: px(this.layout.buttonHeight),
@@ -365,7 +288,7 @@ export default {
       }
     },
     stepperButtonStyle() {
-      const size = this.layout.buttonHeight
+      const size = this.layout.buttonHeight;
       return {
         width: px(size),
         height: px(size),
@@ -400,8 +323,8 @@ export default {
       }
     },
     settingsButtonStyle() {
-      const gap = this.layout.compact ? 6 : 10
-      const panelPadding = Math.max(6, this.layout.spacing)
+      const gap = this.layout.compact ? 6 : 10;
+      const panelPadding = Math.max(6, this.layout.spacing);
       return {
         width: px((this.layout.boardSize - panelPadding * 2 - gap) / 2),
         height: px(this.layout.buttonHeight),
@@ -428,7 +351,7 @@ export default {
       return this.directionZoneStyle('0px', '25%', '35%', '50%')
     },
     messageStyle() {
-      const background = this.over ? 'rgba(238, 228, 218, 0.72)' : 'rgba(237, 194, 46, 0.55)'
+      const background = this.over ? 'rgba(238, 228, 218, 0.72)' : 'rgba(237, 194, 46, 0.55)';
       return {
         position: 'absolute',
         left: '0px',
@@ -478,58 +401,58 @@ export default {
     },
   },
   mounted() {
-    this.recalculateLayout()
-    this.loadGame()
+    this.recalculateLayout();
+    this.loadGame();
   },
   methods: {
     onShow() {
-      this.recalculateLayout()
+      this.recalculateLayout();
     },
     onHide() {
-      this.saveGameState()
+      this.saveGameState();
     },
     onUnload() {
-      this.saveGameState()
+      this.saveGameState();
     },
     scoreBoxHeight() {
       return clamp(this.layout.boardSize * 0.16, 34, 62)
     },
     readDeviceSize() {
-      let width = 500
-      let height = 500
+      let width = 500;
+      let height = 500;
 
       try {
         if (typeof $falcon !== 'undefined' && $falcon.env) {
-          width = Number($falcon.env.deviceWidth) || width
-          height = Number($falcon.env.deviceHeight) || height
+          width = Number($falcon.env.deviceWidth) || width;
+          height = Number($falcon.env.deviceHeight) || height;
         } else if (typeof window !== 'undefined') {
-          width = Number(window.innerWidth) || width
-          height = Number(window.innerHeight) || height
+          width = Number(window.innerWidth) || width;
+          height = Number(window.innerHeight) || height;
         }
       } catch (err) {
-        console.log(`read device size failed ${err}`)
+        console.log(`read device size failed ${err}`);
       }
 
       return { width, height }
     },
     recalculateLayout() {
-      const device = this.readDeviceSize()
-      const width = Math.max(120, device.width)
-      const height = Math.max(260, device.height)
-      const compact = width < 260 || height < 430
-      const padding = clamp(width * 0.04, 6, 20)
-      const titleHeight = compact ? 34 : 52
-      const scoreHeight = clamp(width * 0.11, 34, 62)
-      const topReserve = titleHeight + scoreHeight + (compact ? 8 : 14)
-      const actionReserve = clamp(width * 0.12, 30, 44)
-      const settingsReserve = this.settingsOpen ? (compact ? 94 : 118) : 0
-      const bottomReserve = actionReserve + settingsReserve + (compact ? 12 : 20)
-      const byWidth = width - padding * 2
-      const byHeight = height - padding * 2 - topReserve - bottomReserve
-      const candidate = clamp(Math.min(byWidth, byHeight), 96, 500)
-      const spacing = Math.max(4, Math.round(candidate * 15 / 500))
-      const tileSize = Math.max(18, Math.floor((candidate - spacing * (GRID_SIZE + 1)) / GRID_SIZE))
-      const boardSize = tileSize * GRID_SIZE + spacing * (GRID_SIZE + 1)
+      const device = this.readDeviceSize();
+      const width = Math.max(120, device.width);
+      const height = Math.max(260, device.height);
+      const compact = width < 260 || height < 430;
+      const padding = clamp(width * 0.04, 6, 20);
+      const titleHeight = compact ? 34 : 52;
+      const scoreHeight = clamp(width * 0.11, 34, 62);
+      const topReserve = titleHeight + scoreHeight + (compact ? 8 : 14);
+      const actionReserve = clamp(width * 0.12, 30, 44);
+      const settingsReserve = this.settingsOpen ? (compact ? 94 : 118) : 0;
+      const bottomReserve = actionReserve + settingsReserve + (compact ? 12 : 20);
+      const byWidth = width - padding * 2;
+      const byHeight = height - padding * 2 - topReserve - bottomReserve;
+      const candidate = clamp(Math.min(byWidth, byHeight), 96, 500);
+      const spacing = Math.max(4, Math.round(candidate * 15 / 500));
+      const tileSize = Math.max(18, Math.floor((candidate - spacing * (GRID_SIZE + 1)) / GRID_SIZE));
+      const boardSize = tileSize * GRID_SIZE + spacing * (GRID_SIZE + 1);
 
       this.layout = {
         deviceWidth: width,
@@ -544,93 +467,93 @@ export default {
         buttonFont: clamp(boardSize * 0.05, 12, 18),
         buttonHeight: clamp(boardSize * 0.12, 28, 40),
         compact,
-      }
+      };
     },
     async loadGame() {
-      const bestValue = await this.getStorageValue(BEST_SCORE_KEY)
-      const bestScore = parseInt(bestValue, 10)
-      this.bestScore = Number.isNaN(bestScore) ? 0 : bestScore
+      const bestValue = await this.getStorageValue(BEST_SCORE_KEY);
+      const bestScore = parseInt(bestValue, 10);
+      this.bestScore = Number.isNaN(bestScore) ? 0 : bestScore;
 
-      const settings = parseJson(await this.getStorageValue(SETTINGS_KEY))
+      const settings = parseJson(await this.getStorageValue(SETTINGS_KEY));
       if (settings && typeof settings.fourProbability === 'number') {
-        this.fourProbability = clamp(settings.fourProbability, 0, 1)
+        this.fourProbability = clamp(settings.fourProbability, 0, 1);
       }
 
-      const state = parseJson(await this.getStorageValue(GAME_STATE_KEY))
+      const state = parseJson(await this.getStorageValue(GAME_STATE_KEY));
       if (state && state.grid && state.grid.cells && state.over !== true) {
-        this.restoreState(state)
+        this.restoreState(state);
       } else {
-        this.startFreshGame()
-        this.saveGameState()
+        this.startFreshGame();
+        this.saveGameState();
       }
     },
     restoreState(state) {
-      this.grid = createEmptyGrid()
-      this.nextTileId = 1
+      this.grid = createEmptyGrid();
+      this.nextTileId = 1;
       for (let x = 0; x < GRID_SIZE; x += 1) {
         for (let y = 0; y < GRID_SIZE; y += 1) {
-          const cell = state.grid.cells[x] && state.grid.cells[x][y]
+          const cell = state.grid.cells[x] && state.grid.cells[x][y];
           if (cell) {
-            this.grid[x][y] = this.makeTile({ x, y }, cell.value || 2)
+            this.grid[x][y] = this.makeTile({ x, y }, cell.value || 2);
           }
         }
       }
-      this.score = Number(state.score) || 0
-      this.over = !!state.over
-      this.won = !!state.won
-      this.keepPlaying = !!state.keepPlaying
+      this.score = Number(state.score) || 0;
+      this.over = !!state.over;
+      this.won = !!state.won;
+      this.keepPlaying = !!state.keepPlaying;
       if (typeof state.fourProbability === 'number') {
-        this.fourProbability = clamp(state.fourProbability, 0, 1)
+        this.fourProbability = clamp(state.fourProbability, 0, 1);
       }
-      this.bestScore = Math.max(this.bestScore, Number(state.bestScore) || 0, this.score)
-      this.updateTiles()
+      this.bestScore = Math.max(this.bestScore, Number(state.bestScore) || 0, this.score);
+      this.updateTiles();
     },
     startFreshGame() {
-      this.animationLocked = false
-      this.grid = createEmptyGrid()
-      this.nextTileId = 1
-      this.score = 0
-      this.scoreAddition = 0
-      this.over = false
-      this.won = false
-      this.keepPlaying = false
+      this.animationLocked = false;
+      this.grid = createEmptyGrid();
+      this.nextTileId = 1;
+      this.score = 0;
+      this.scoreAddition = 0;
+      this.over = false;
+      this.won = false;
+      this.keepPlaying = false;
       for (let index = 0; index < START_TILES; index += 1) {
-        this.addRandomTile()
+        this.addRandomTile();
       }
-      this.updateTiles()
+      this.updateTiles();
     },
     async restartGame(event) {
-      this.preventDefault(event)
-      await this.removeStorageValue(GAME_STATE_KEY)
-      this.startFreshGame()
-      this.saveGameState()
+      this.preventDefault(event);
+      await this.removeStorageValue(GAME_STATE_KEY);
+      this.startFreshGame();
+      this.saveGameState();
     },
     continueGame(event) {
-      this.preventDefault(event)
-      this.keepPlaying = true
-      this.saveGameState()
+      this.preventDefault(event);
+      this.keepPlaying = true;
+      this.saveGameState();
     },
     toggleSettings() {
-      this.settingsOpen = !this.settingsOpen
+      this.settingsOpen = !this.settingsOpen;
       this.$nextTick(() => {
-        this.recalculateLayout()
-      })
+        this.recalculateLayout();
+      });
     },
     adjustFourProbability(delta) {
-      const next = Math.round(clamp(this.fourProbability + delta, 0, 1) * 100) / 100
-      this.fourProbability = next
-      this.saveSettings()
-      this.saveGameState()
+      const next = Math.round(clamp(this.fourProbability + delta, 0, 1) * 100) / 100;
+      this.fourProbability = next;
+      this.saveSettings();
+      this.saveGameState();
     },
     resetBestScore() {
-      this.bestScore = 0
-      this.setStorageValue(BEST_SCORE_KEY, '0')
-      this.saveGameState()
+      this.bestScore = 0;
+      this.setStorageValue(BEST_SCORE_KEY, '0');
+      this.saveGameState();
     },
     async clearSavedGame() {
-      await this.removeStorageValue(GAME_STATE_KEY)
-      this.startFreshGame()
-      this.saveGameState()
+      await this.removeStorageValue(GAME_STATE_KEY);
+      this.startFreshGame();
+      this.saveGameState();
     },
     makeTile(position, value) {
       const tile = {
@@ -642,27 +565,27 @@ export default {
         mergedFrom: null,
         isNew: false,
         isMerged: false,
-      }
-      this.nextTileId += 1
+      };
+      this.nextTileId += 1;
       return tile
     },
     addRandomTile() {
-      const cells = this.availableCells()
+      const cells = this.availableCells();
       if (!cells.length) {
         return
       }
-      const cell = cells[Math.floor(Math.random() * cells.length)]
-      const value = Math.random() < (1 - this.fourProbability) ? 2 : 4
-      const tile = this.makeTile(cell, value)
-      tile.isNew = true
-      this.insertTile(tile)
+      const cell = cells[Math.floor(Math.random() * cells.length)];
+      const value = Math.random() < (1 - this.fourProbability) ? 2 : 4;
+      const tile = this.makeTile(cell, value);
+      tile.isNew = true;
+      this.insertTile(tile);
     },
     availableCells() {
-      const cells = []
+      const cells = [];
       for (let x = 0; x < GRID_SIZE; x += 1) {
         for (let y = 0; y < GRID_SIZE; y += 1) {
           if (!this.grid[x][y]) {
-            cells.push({ x, y })
+            cells.push({ x, y });
           }
         }
       }
@@ -678,10 +601,10 @@ export default {
       return null
     },
     insertTile(tile) {
-      this.grid[tile.x][tile.y] = tile
+      this.grid[tile.x][tile.y] = tile;
     },
     removeTile(tile) {
-      this.grid[tile.x][tile.y] = null
+      this.grid[tile.x][tile.y] = null;
     },
     withinBounds(position) {
       return position.x >= 0 && position.x < GRID_SIZE && position.y >= 0 && position.y < GRID_SIZE
@@ -689,89 +612,89 @@ export default {
     prepareTiles() {
       for (let x = 0; x < GRID_SIZE; x += 1) {
         for (let y = 0; y < GRID_SIZE; y += 1) {
-          const tile = this.grid[x][y]
+          const tile = this.grid[x][y];
           if (tile) {
-            tile.mergedFrom = null
-            tile.previousPosition = { x: tile.x, y: tile.y }
-            tile.isNew = false
-            tile.isMerged = false
+            tile.mergedFrom = null;
+            tile.previousPosition = { x: tile.x, y: tile.y };
+            tile.isNew = false;
+            tile.isMerged = false;
           }
         }
       }
     },
     moveTile(tile, cell) {
-      this.grid[tile.x][tile.y] = null
-      this.grid[cell.x][cell.y] = tile
-      tile.x = cell.x
-      tile.y = cell.y
+      this.grid[tile.x][tile.y] = null;
+      this.grid[cell.x][cell.y] = tile;
+      tile.x = cell.x;
+      tile.y = cell.y;
     },
     move(direction, event) {
-      this.preventDefault(event)
+      this.preventDefault(event);
       if (this.animationLocked || this.isGameTerminated()) {
         return
       }
 
-      const previousScore = this.score
-      const vector = this.getVector(direction)
-      const traversals = this.buildTraversals(vector)
-      let moved = false
+      const previousScore = this.score;
+      const vector = this.getVector(direction);
+      const traversals = this.buildTraversals(vector);
+      let moved = false;
 
-      this.prepareTiles()
+      this.prepareTiles();
 
       traversals.x.forEach((x) => {
         traversals.y.forEach((y) => {
-          const cell = { x, y }
-          const tile = this.cellContent(cell)
+          const cell = { x, y };
+          const tile = this.cellContent(cell);
 
           if (tile) {
-            const positions = this.findFarthestPosition(cell, vector)
-            const next = this.cellContent(positions.next)
+            const positions = this.findFarthestPosition(cell, vector);
+            const next = this.cellContent(positions.next);
 
             if (next && next.value === tile.value && !next.mergedFrom) {
-              const merged = this.makeTile(positions.next, tile.value * 2)
-              merged.mergedFrom = [tile, next]
-              merged.isMerged = true
+              const merged = this.makeTile(positions.next, tile.value * 2);
+              merged.mergedFrom = [tile, next];
+              merged.isMerged = true;
 
-              this.insertTile(merged)
-              this.removeTile(tile)
-              tile.x = positions.next.x
-              tile.y = positions.next.y
+              this.insertTile(merged);
+              this.removeTile(tile);
+              tile.x = positions.next.x;
+              tile.y = positions.next.y;
 
-              this.score += merged.value
+              this.score += merged.value;
               if (merged.value === 2048) {
-                this.won = true
+                this.won = true;
               }
             } else {
-              this.moveTile(tile, positions.farthest)
+              this.moveTile(tile, positions.farthest);
             }
 
             if (!this.positionsEqual(cell, tile)) {
-              moved = true
+              moved = true;
             }
           }
-        })
-      })
+        });
+      });
 
       if (!moved) {
-        this.updateTiles()
+        this.updateTiles();
         return
       }
 
-      this.addRandomTile()
+      this.addRandomTile();
       if (!this.movesAvailable()) {
-        this.over = true
+        this.over = true;
       }
       if (this.score > this.bestScore) {
-        this.bestScore = this.score
+        this.bestScore = this.score;
       }
 
-      const delta = this.score - previousScore
+      const delta = this.score - previousScore;
       if (delta > 0) {
-        this.showScoreAddition(delta)
+        this.showScoreAddition(delta);
       }
 
-      this.playMoveAnimation()
-      this.saveGameState()
+      this.playMoveAnimation();
+      this.saveGameState();
     },
     getVector(direction) {
       const map = {
@@ -779,29 +702,29 @@ export default {
         1: { x: 1, y: 0 },
         2: { x: 0, y: 1 },
         3: { x: -1, y: 0 },
-      }
+      };
       return map[direction]
     },
     buildTraversals(vector) {
-      const traversals = { x: [], y: [] }
+      const traversals = { x: [], y: [] };
       for (let pos = 0; pos < GRID_SIZE; pos += 1) {
-        traversals.x.push(pos)
-        traversals.y.push(pos)
+        traversals.x.push(pos);
+        traversals.y.push(pos);
       }
       if (vector.x === 1) {
-        traversals.x = traversals.x.reverse()
+        traversals.x = traversals.x.reverse();
       }
       if (vector.y === 1) {
-        traversals.y = traversals.y.reverse()
+        traversals.y = traversals.y.reverse();
       }
       return traversals
     },
     findFarthestPosition(cell, vector) {
-      let previous
-      let current = cell
+      let previous;
+      let current = cell;
       do {
-        previous = current
-        current = { x: previous.x + vector.x, y: previous.y + vector.y }
+        previous = current;
+        current = { x: previous.x + vector.x, y: previous.y + vector.y };
       } while (this.withinBounds(current) && !this.cellContent(current))
 
       return {
@@ -815,11 +738,11 @@ export default {
     tileMatchesAvailable() {
       for (let x = 0; x < GRID_SIZE; x += 1) {
         for (let y = 0; y < GRID_SIZE; y += 1) {
-          const tile = this.cellContent({ x, y })
+          const tile = this.cellContent({ x, y });
           if (tile) {
             for (let direction = 0; direction < 4; direction += 1) {
-              const vector = this.getVector(direction)
-              const other = this.cellContent({ x: x + vector.x, y: y + vector.y })
+              const vector = this.getVector(direction);
+              const other = this.cellContent({ x: x + vector.x, y: y + vector.y });
               if (other && other.value === tile.value) {
                 return true
               }
@@ -843,11 +766,11 @@ export default {
         popNewAndMerged = false,
         popScale = null,
         disableMoveTransition = true,
-      } = options
-      const tiles = []
+      } = options;
+      const tiles = [];
       for (let y = 0; y < GRID_SIZE; y += 1) {
         for (let x = 0; x < GRID_SIZE; x += 1) {
-          const tile = this.grid[x][y]
+          const tile = this.grid[x][y];
           if (tile) {
             tiles.push(this.renderTile(tile, {
               moveProgress,
@@ -855,11 +778,11 @@ export default {
               popNewAndMerged,
               popScale,
               disableMoveTransition,
-            }))
+            }));
 
             if (includeMergedGhosts && tile.mergedFrom) {
               tile.mergedFrom.forEach((source, index) => {
-                const from = source.previousPosition || { x: source.x, y: source.y }
+                const from = source.previousPosition || { x: source.x, y: source.y };
                 tiles.push({
                   renderId: `ghost-${tile.id}-${source.id}-${index}`,
                   id: `ghost-${tile.id}-${source.id}-${index}`,
@@ -876,17 +799,17 @@ export default {
                   opacity: 1,
                   disableMoveTransition,
                   disableInnerTransition: true,
-                })
-              })
+                });
+              });
             }
           }
         }
       }
-      this.tiles = tiles
+      this.tiles = tiles;
     },
     renderTile(tile, options) {
-      const from = tile.previousPosition || { x: tile.x, y: tile.y }
-      const shouldPop = tile.isNew || tile.isMerged
+      const from = tile.previousPosition || { x: tile.x, y: tile.y };
+      const shouldPop = tile.isNew || tile.isMerged;
       return {
         renderId: `tile-${tile.id}`,
         id: tile.id,
@@ -906,35 +829,35 @@ export default {
       }
     },
     playMoveAnimation() {
-      this.animationLocked = true
+      this.animationLocked = true;
       this.updateTiles({
         includeMergedGhosts: true,
         moveProgress: 0,
         hideNewAndMerged: true,
         disableMoveTransition: true,
-      })
+      });
 
       this.$nextTick(() => {
-        this.animateMoveFrame(1)
-      })
+        this.animateMoveFrame(1);
+      });
     },
     animateMoveFrame(frame) {
       if (frame > MOVE_FRAME_COUNT) {
-        this.animatePopFrame(0)
+        this.animatePopFrame(0);
         return
       }
 
-      const progress = this.easeOut(frame / MOVE_FRAME_COUNT)
+      const progress = this.easeOut(frame / MOVE_FRAME_COUNT);
       this.updateTiles({
         includeMergedGhosts: true,
         moveProgress: progress,
         hideNewAndMerged: true,
         disableMoveTransition: true,
-      })
+      });
 
       this.runAfter(Math.round(MOVE_ANIMATION_MS / MOVE_FRAME_COUNT), () => {
-        this.animateMoveFrame(frame + 1)
-      })
+        this.animateMoveFrame(frame + 1);
+      });
     },
     animatePopFrame(frame) {
       if (frame > POP_FRAME_COUNT) {
@@ -943,27 +866,27 @@ export default {
           hideNewAndMerged: false,
           popNewAndMerged: false,
           disableMoveTransition: true,
-        })
-        this.clearTransientTileFlags()
-        this.animationLocked = false
+        });
+        this.clearTransientTileFlags();
+        this.animationLocked = false;
         return
       }
 
-      const progress = frame / POP_FRAME_COUNT
+      const progress = frame / POP_FRAME_COUNT;
       const scale = progress < 0.55
         ? progress / 0.55 * 1.16
-        : 1.16 - ((progress - 0.55) / 0.45 * 0.16)
+        : 1.16 - ((progress - 0.55) / 0.45 * 0.16);
       this.updateTiles({
         includeMergedGhosts: false,
         hideNewAndMerged: false,
         popNewAndMerged: true,
         popScale: scale,
         disableMoveTransition: true,
-      })
+      });
 
       this.runAfter(Math.round(POP_ANIMATION_MS / POP_FRAME_COUNT), () => {
-        this.animatePopFrame(frame + 1)
-      })
+        this.animatePopFrame(frame + 1);
+      });
     },
     easeOut(progress) {
       return 1 - Math.pow(1 - progress, 3)
@@ -971,43 +894,43 @@ export default {
     clearTransientTileFlags() {
       for (let x = 0; x < GRID_SIZE; x += 1) {
         for (let y = 0; y < GRID_SIZE; y += 1) {
-          const tile = this.grid[x][y]
+          const tile = this.grid[x][y];
           if (tile) {
-            tile.previousPosition = null
-            tile.mergedFrom = null
-            tile.isNew = false
-            tile.isMerged = false
+            tile.previousPosition = null;
+            tile.mergedFrom = null;
+            tile.isNew = false;
+            tile.isMerged = false;
           }
         }
       }
     },
     runAfter(ms, callback) {
       if (this.$page && this.$page.setTimeout) {
-        this.$page.setTimeout(callback, ms)
+        this.$page.setTimeout(callback, ms);
       } else {
-        setTimeout(callback, ms)
+        setTimeout(callback, ms);
       }
     },
     showScoreAddition(delta) {
-      this.scoreAddition = delta
+      this.scoreAddition = delta;
       const clear = () => {
-        this.scoreAddition = 0
-      }
+        this.scoreAddition = 0;
+      };
       if (this.$page && this.$page.setTimeout) {
-        this.$page.setTimeout(clear, 650)
+        this.$page.setTimeout(clear, 650);
       } else {
-        setTimeout(clear, 650)
+        setTimeout(clear, 650);
       }
     },
     serializeState() {
-      const cells = []
+      const cells = [];
       for (let x = 0; x < GRID_SIZE; x += 1) {
-        const column = []
+        const column = [];
         for (let y = 0; y < GRID_SIZE; y += 1) {
-          const tile = this.grid[x][y]
-          column.push(tile ? { position: { x, y }, value: tile.value } : null)
+          const tile = this.grid[x][y];
+          column.push(tile ? { position: { x, y }, value: tile.value } : null);
         }
-        cells.push(column)
+        cells.push(column);
       }
 
       return {
@@ -1025,81 +948,81 @@ export default {
       }
     },
     async saveGameState() {
-      await this.setStorageValue(BEST_SCORE_KEY, String(this.bestScore))
-      await this.saveSettings()
+      await this.setStorageValue(BEST_SCORE_KEY, String(this.bestScore));
+      await this.saveSettings();
       if (this.over) {
-        await this.removeStorageValue(GAME_STATE_KEY)
+        await this.removeStorageValue(GAME_STATE_KEY);
       } else {
-        await this.setStorageValue(GAME_STATE_KEY, JSON.stringify(this.serializeState()))
+        await this.setStorageValue(GAME_STATE_KEY, JSON.stringify(this.serializeState()));
       }
     },
     async saveSettings() {
       await this.setStorageValue(SETTINGS_KEY, JSON.stringify({
         fourProbability: this.fourProbability,
-      }))
+      }));
     },
     async getStorageValue(key) {
       try {
         return await kvStorage.getStorage(key)
       } catch (err) {
-        console.log(`get storage ${key} failed ${err}`)
+        console.log(`get storage ${key} failed ${err}`);
         return null
       }
     },
     async setStorageValue(key, value) {
       try {
-        await kvStorage.setStorage(key, value)
+        await kvStorage.setStorage(key, value);
       } catch (err) {
-        console.log(`set storage ${key} failed ${err}`)
+        console.log(`set storage ${key} failed ${err}`);
       }
     },
     async removeStorageValue(key) {
       try {
-        await kvStorage.removeStorage(key)
+        await kvStorage.removeStorage(key);
       } catch (err) {
-        console.log(`remove storage ${key} failed ${err}`)
+        console.log(`remove storage ${key} failed ${err}`);
       }
     },
     handleTouchStart(event) {
-      this.touchStartPoint = this.extractPoint(event, false)
-      this.preventDefault(event)
+      this.touchStartPoint = this.extractPoint(event, false);
+      this.preventDefault(event);
     },
     handleTouchMove(event) {
-      this.preventDefault(event)
+      this.preventDefault(event);
     },
     handleTouchEnd(event) {
-      const start = this.touchStartPoint
-      const end = this.extractPoint(event, true)
-      this.touchStartPoint = null
-      this.preventDefault(event)
+      const start = this.touchStartPoint;
+      const end = this.extractPoint(event, true);
+      this.touchStartPoint = null;
+      this.preventDefault(event);
 
       if (!start || !end) {
         return
       }
 
-      const dx = end.x - start.x
-      const dy = end.y - start.y
-      const absDx = Math.abs(dx)
-      const absDy = Math.abs(dy)
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
       if (Math.max(absDx, absDy) <= Math.max(10, this.layout.boardSize * 0.04)) {
         return
       }
 
-      this.move(absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0))
+      this.move(absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
     },
     extractPoint(event, preferChanged) {
-      const source = event || {}
-      const data = source.data || {}
-      const touchList = preferChanged ? (source.changedTouches || data.changedTouches) : (source.touches || data.touches)
-      const fallback = source.targetTouches || data.targetTouches
-      let point = null
+      const source = event || {};
+      const data = source.data || {};
+      const touchList = preferChanged ? (source.changedTouches || data.changedTouches) : (source.touches || data.touches);
+      const fallback = source.targetTouches || data.targetTouches;
+      let point = null;
 
       if (touchList && touchList.length) {
-        point = touchList[0]
+        point = touchList[0];
       } else if (fallback && fallback.length) {
-        point = fallback[0]
+        point = fallback[0];
       } else {
-        point = data.clientX !== undefined ? data : source
+        point = data.clientX !== undefined ? data : source;
       }
 
       if (point && (point.clientX !== undefined || point.pageX !== undefined)) {
@@ -1112,32 +1035,32 @@ export default {
     },
     preventDefault(event) {
       if (event && event.preventDefault) {
-        event.preventDefault()
+        event.preventDefault();
       }
     },
     tileClass(tile) {
-      const classes = ['tile']
-      classes.push(`tile-${tile.value > 2048 ? 'super' : tile.value}`)
+      const classes = ['tile'];
+      classes.push(`tile-${tile.value > 2048 ? 'super' : tile.value}`);
       if (tile.isGhost) {
-        classes.push('tile-ghost')
+        classes.push('tile-ghost');
       }
       if (tile.isNew) {
-        classes.push('tile-new')
+        classes.push('tile-new');
       }
       if (tile.isMerged) {
-        classes.push('tile-merged')
+        classes.push('tile-merged');
       }
       return classes
     },
     tileStyle(tile) {
-      let tileX = tile.x
-      let tileY = tile.y
+      let tileX = tile.x;
+      let tileY = tile.y;
       if (tile.moveProgress !== null && tile.moveProgress !== undefined && tile.fromX !== undefined && tile.fromY !== undefined) {
-        tileX = tile.fromX + (tile.x - tile.fromX) * tile.moveProgress
-        tileY = tile.fromY + (tile.y - tile.fromY) * tile.moveProgress
+        tileX = tile.fromX + (tile.x - tile.fromX) * tile.moveProgress;
+        tileY = tile.fromY + (tile.y - tile.fromY) * tile.moveProgress;
       }
-      const x = this.layout.spacing + tileX * (this.layout.tileSize + this.layout.spacing)
-      const y = this.layout.spacing + tileY * (this.layout.tileSize + this.layout.spacing)
+      const x = this.layout.spacing + tileX * (this.layout.tileSize + this.layout.spacing);
+      const y = this.layout.spacing + tileY * (this.layout.tileSize + this.layout.spacing);
       return {
         position: 'absolute',
         width: px(this.layout.tileSize),
@@ -1152,7 +1075,7 @@ export default {
       }
     },
     tileInnerStyle(tile) {
-      const theme = this.tileTheme(tile.value)
+      const theme = this.tileTheme(tile.value);
       return {
         width: px(this.layout.tileSize),
         height: px(this.layout.tileSize),
@@ -1168,7 +1091,7 @@ export default {
       }
     },
     tileTextStyle(tile) {
-      const theme = this.tileTheme(tile.value)
+      const theme = this.tileTheme(tile.value);
       return {
         color: theme.color,
         fontSize: px(this.tileFontSize(tile.value)),
@@ -1222,15 +1145,227 @@ export default {
       }
     },
   },
-}
-</script>
+};
 
-<style lang="less" scoped>
-.game-page {
-  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
-}
+var style_0 = { "_": {
+  "game-page": {
+    "fontFamily": "\"Clear Sans\", \"Helvetica Neue\", Arial, sans-serif"
+  },
+  "direction-zone": {
+    "borderWidth": "0px"
+  }
+} };
 
-.direction-zone {
-  border-width: 0px;
-}
-</style>
+var render = function (){
+var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
+  return _c('div', {
+    staticClass: ["game-page"],
+    style: _vm.pageStyle
+  }, [_c('div', {
+    staticClass: ["game-shell"],
+    style: _vm.shellStyle
+  }, [_c('div', {
+    staticClass: ["top-panel"],
+    style: _vm.topPanelStyle
+  }, [_c('text', {
+    staticClass: ["title"],
+    style: _vm.titleStyle
+  }, [_vm._v("2048")]), _c('div', {
+    staticClass: ["scores"],
+    style: _vm.scoresStyle
+  }, [_c('div', {
+    staticClass: ["score-box"],
+    style: _vm.scoreBoxStyle
+  }, [_c('text', {
+    staticClass: ["score-label"],
+    style: _vm.scoreLabelStyle
+  }, [_vm._v("SCORE")]), _c('text', {
+    staticClass: ["score-value"],
+    style: _vm.scoreValueStyle
+  }, [_vm._v(_vm._s(_vm.score))]), (_vm.scoreAddition) ? _c('text', {
+    staticClass: ["score-addition"],
+    style: _vm.scoreAdditionStyle
+  }, [_vm._v("+" + _vm._s(_vm.scoreAddition))]) : _vm._e()]), _c('div', {
+    staticClass: ["score-box"],
+    style: _vm.scoreBoxStyle
+  }, [_c('text', {
+    staticClass: ["score-label"],
+    style: _vm.scoreLabelStyle
+  }, [_vm._v("BEST")]), _c('text', {
+    staticClass: ["score-value"],
+    style: _vm.scoreValueStyle
+  }, [_vm._v(_vm._s(_vm.bestScore))])])])]), _c('div', {
+    staticClass: ["game-container"],
+    style: _vm.gameContainerStyle,
+    on: {
+      "touchstart": _vm.handleTouchStart,
+      "touchmove": _vm.handleTouchMove,
+      "touchend": _vm.handleTouchEnd
+    }
+  }, [_c('div', {
+    staticClass: ["grid-container"],
+    style: _vm.gridContainerStyle
+  }, _vm._l((_vm.gridRows), function(row) {
+    return _c('div', {
+      key: row,
+      staticClass: ["grid-row"],
+      style: _vm.gridRowStyle(row)
+    }, _vm._l((_vm.gridCols), function(cell) {
+      return _c('div', {
+        key: cell,
+        staticClass: ["grid-cell"],
+        style: _vm.gridCellStyle(cell)
+      })
+    }), 0)
+  }), 0), _c('div', {
+    staticClass: ["tile-container"],
+    style: _vm.tileContainerStyle
+  }, _vm._l((_vm.tiles), function(tile) {
+    return _c('div', {
+      key: tile.renderId,
+      class: _vm.tileClass(tile),
+      style: _vm.tileStyle(tile)
+    }, [_c('div', {
+      staticClass: ["tile-inner"],
+      style: _vm.tileInnerStyle(tile)
+    }, [_c('text', {
+      staticClass: ["tile-text"],
+      style: _vm.tileTextStyle(tile)
+    }, [_vm._v(_vm._s(tile.value))])])])
+  }), 0), _c('div', {
+    staticClass: ["direction-zone", "zone-up"],
+    style: _vm.zoneUpStyle,
+    on: {
+      "click": function($event) {
+        return _vm.move(0)
+      }
+    }
+  }), _c('div', {
+    staticClass: ["direction-zone", "zone-right"],
+    style: _vm.zoneRightStyle,
+    on: {
+      "click": function($event) {
+        return _vm.move(1)
+      }
+    }
+  }), _c('div', {
+    staticClass: ["direction-zone", "zone-down"],
+    style: _vm.zoneDownStyle,
+    on: {
+      "click": function($event) {
+        return _vm.move(2)
+      }
+    }
+  }), _c('div', {
+    staticClass: ["direction-zone", "zone-left"],
+    style: _vm.zoneLeftStyle,
+    on: {
+      "click": function($event) {
+        return _vm.move(3)
+      }
+    }
+  }), (_vm.showMessage) ? _c('div', {
+    staticClass: ["game-message"],
+    style: _vm.messageStyle
+  }, [_c('text', {
+    staticClass: ["message-title"],
+    style: _vm.messageTitleStyle
+  }, [_vm._v(_vm._s(_vm.messageText))]), _c('div', {
+    staticClass: ["message-actions"],
+    style: _vm.messageActionsStyle
+  }, [(_vm.won && !_vm.keepPlaying) ? _c('text', {
+    staticClass: ["small-button"],
+    style: _vm.smallButtonStyle,
+    on: {
+      "click": _vm.continueGame
+    }
+  }, [_vm._v("继续")]) : _vm._e(), _c('text', {
+    staticClass: ["small-button"],
+    style: _vm.smallButtonStyle,
+    on: {
+      "click": _vm.restartGame
+    }
+  }, [_vm._v("再试一次")])])]) : _vm._e()]), _c('div', {
+    staticClass: ["bottom-panel"],
+    style: _vm.bottomPanelStyle
+  }, [_c('div', {
+    staticClass: ["main-actions"],
+    style: _vm.mainActionsStyle
+  }, [_c('text', {
+    staticClass: ["action-button"],
+    style: _vm.actionButtonStyle,
+    on: {
+      "click": _vm.restartGame
+    }
+  }, [_vm._v("新游戏")]), _c('text', {
+    staticClass: ["action-button"],
+    style: _vm.actionButtonStyle,
+    on: {
+      "click": _vm.toggleSettings
+    }
+  }, [_vm._v("设置")])]), (_vm.settingsOpen) ? _c('div', {
+    staticClass: ["settings-panel"],
+    style: _vm.settingsPanelStyle
+  }, [_c('div', {
+    staticClass: ["settings-row"],
+    style: _vm.settingsRowStyle
+  }, [_c('text', {
+    staticClass: ["settings-label"],
+    style: _vm.settingsLabelStyle
+  }, [_vm._v("生成 4 概率")]), _c('div', {
+    staticClass: ["probability-control"],
+    style: _vm.probabilityControlStyle
+  }, [_c('text', {
+    staticClass: ["stepper-button"],
+    style: _vm.stepperButtonStyle,
+    on: {
+      "click": function($event) {
+        return _vm.adjustFourProbability(-0.05)
+      }
+    }
+  }, [_vm._v("-")]), _c('text', {
+    staticClass: ["probability-value"],
+    style: _vm.probabilityValueStyle
+  }, [_vm._v(_vm._s(_vm.probabilityLabel))]), _c('text', {
+    staticClass: ["stepper-button"],
+    style: _vm.stepperButtonStyle,
+    on: {
+      "click": function($event) {
+        return _vm.adjustFourProbability(0.05)
+      }
+    }
+  }, [_vm._v("+")])])]), _c('div', {
+    staticClass: ["settings-actions"],
+    style: _vm.settingsActionsStyle
+  }, [_c('text', {
+    staticClass: ["settings-button"],
+    style: _vm.settingsButtonStyle,
+    on: {
+      "click": _vm.resetBestScore
+    }
+  }, [_vm._v("重置最佳")]), _c('text', {
+    staticClass: ["settings-button"],
+    style: _vm.settingsButtonStyle,
+    on: {
+      "click": _vm.clearSavedGame
+    }
+  }, [_vm._v("清除存档")])])]) : _vm._e()])])])
+};
+
+var staticRenderFns=[];
+render._withStripped = true;
+  
+const __file = 'src/pages/index/index.vue';
+const _scopeId = 'data-v-1badc801';
+
+const _exports = script;
+
+_exports.render = render;
+_exports.staticRenderFns = staticRenderFns;
+_exports._compiled = true;
+_exports._scopeId = _scopeId;
+_exports.themes = {};
+_exports.style = Object.assign({}, style_0['_']);
+_exports.__file = __file;
+
+export { _exports as default };
