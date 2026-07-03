@@ -1,6 +1,29 @@
-import kvStorage from 'storage';
-
 var __$_require_board_grid_png__ = "images/9f18a4cae52d62389ce354393b5e1b9f.png";
+
+const memory = {};
+
+var kvStorage = {
+  async getStorage(key) {
+    return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : null
+  },
+  async setStorage(key, value) {
+    memory[key] = String(value);
+    return 0
+  },
+  async removeStorage(key) {
+    delete memory[key];
+    return 0
+  },
+  async getStorageKeys() {
+    return Object.keys(memory)
+  },
+  async clearStorage() {
+    Object.keys(memory).forEach((key) => {
+      delete memory[key];
+    });
+    return 0
+  },
+};
 
 const GRID_SIZE = 4;
 const START_TILES = 2;
