@@ -216,6 +216,9 @@
 </template>
 
 <script>
+// storage 是文档中的系统级 JSAPI(jsapi/system/file_crypto/storage-kv.md),由容器内置提供,
+// 写入应用路径下的持久化文件,退出/重启小程序进程后依然可读。
+// 模拟器/预览环境下的替代实现见 api-mock/storage.js,由框架按文档 mock 机制自动混入,无需在此处理。
 import kvStorage from 'storage'
 
 const GRID_SIZE = 4
@@ -282,8 +285,6 @@ export default {
     return {
       grid: createEmptyGrid(),
       tiles: [],
-      gridRows: [0, 1, 2, 3],
-      gridCols: [0, 1, 2, 3],
       score: 0,
       bestScore: 0,
       scoreAddition: 0,
@@ -299,6 +300,11 @@ export default {
       horizontalSwipeIndex: 1,
       verticalSwipeIndex: 1,
       animationLocked: false,
+      animationToken: 0,
+      scoreAdditionToken: 0,
+      // 结束弹层不透明度:原版有 1.2s 延迟 + 800ms 淡入
+      messageOpacity: 1,
+      messageToken: 0,
       layout: {
         deviceWidth: 500,
         deviceHeight: 500,
@@ -433,7 +439,6 @@ export default {
     titleStyle() {
       return {
         color: '#776e65',
-        fontFamily: '"Clear Sans", "Helvetica Neue", Arial, sans-serif',
         fontSize: px(this.layout.titleFont),
         fontWeight: 'bold',
         textAlign: 'center',
@@ -508,16 +513,6 @@ export default {
         borderRadius: px(Math.max(6, this.layout.spacing * 0.6)),
       }
     },
-    gridContainerStyle() {
-      return {
-        position: 'absolute',
-        left: px(this.layout.spacing),
-        top: px(this.layout.spacing),
-        width: px(this.layout.boardSize - this.layout.spacing * 2),
-        height: px(this.layout.boardSize - this.layout.spacing * 2),
-        zIndex: 1,
-      }
-    },
     gridImageStyle() {
       return {
         position: 'absolute',
@@ -539,21 +534,6 @@ export default {
         height: px(this.layout.boardSize),
         zIndex: 6,
       }
-    },
-    bottomPanelStyle() {
-      const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
-      const style = {
-        position: 'relative',
-        width: px(width),
-        alignItems: 'stretch',
-      }
-      if (this.layout.isLandscape) {
-        style.height = px(this.layout.boardSize)
-        style.justifyContent = 'center'
-      } else {
-        style.marginTop = px(this.layout.compact ? 8 : 12)
-      }
-      return style
     },
     mainActionsStyle() {
       const width = this.layout.isLandscape ? this.layout.sidePanelWidth : this.layout.boardSize
@@ -712,8 +692,10 @@ export default {
         zIndex: 8,
       }
     },
+    // 结束弹层,按原版 2048 样式等比缩放(原版以 500px 棋盘为基准):
+    // 遮罩 rgba(238,228,218,0.5) / 胜利 rgba(237,194,46,0.5)
     messageStyle() {
-      const background = this.over ? 'rgba(238, 228, 218, 0.72)' : 'rgba(237, 194, 46, 0.55)'
+      const background = this.over ? 'rgba(238, 228, 218, 0.5)' : 'rgba(237, 194, 46, 0.5)'
       return {
         position: 'absolute',
         left: '0px',
@@ -721,41 +703,48 @@ export default {
         width: px(this.layout.boardSize),
         height: px(this.layout.boardSize),
         backgroundColor: background,
+        borderRadius: px(Math.max(6, this.layout.spacing * 0.6)),
+        opacity: this.messageOpacity,
         zIndex: 10,
         alignItems: 'center',
         justifyContent: 'center',
       }
     },
+    // 原版标题: 60px/500px 棋盘 = 0.12,粗体
     messageTitleStyle() {
+      const fontSize = clamp(this.layout.boardSize * 0.12, 18, 60)
       return {
         color: this.over ? '#776e65' : '#f9f6f2',
-        fontSize: px(clamp(this.layout.boardSize * 0.13, 20, 60)),
+        fontSize: px(fontSize),
         fontWeight: 'bold',
         textAlign: 'center',
         lines: 1,
-        height: px(clamp(this.layout.boardSize * 0.16, 26, 70)),
-        lineHeight: px(clamp(this.layout.boardSize * 0.16, 26, 70)),
+        height: px(fontSize + 6),
+        lineHeight: px(fontSize + 6),
       }
     },
+    // 原版按钮行与标题间距: 59px/500px = 0.118
     messageActionsStyle() {
       return {
-        marginTop: px(Math.max(10, this.layout.boardSize * 0.1)),
+        marginTop: px(Math.max(8, this.layout.boardSize * 0.118)),
         flexDirection: 'row',
         justifyContent: 'center',
       }
     },
+    // 原版按钮: 高40/行高42/左右内边距20/圆角3/间距9 (基于500px棋盘)
     smallButtonStyle() {
+      const height = clamp(this.layout.boardSize * 0.08, 20, 40)
       return {
-        marginLeft: px(4),
-        marginRight: px(4),
-        paddingLeft: px(Math.max(8, this.layout.spacing)),
-        paddingRight: px(Math.max(8, this.layout.spacing)),
-        height: px(this.layout.buttonHeight),
-        lineHeight: px(this.layout.buttonHeight + 2),
+        marginLeft: px(Math.max(2, this.layout.boardSize * 0.009)),
+        marginRight: px(Math.max(2, this.layout.boardSize * 0.009)),
+        paddingLeft: px(Math.max(8, this.layout.boardSize * 0.04)),
+        paddingRight: px(Math.max(8, this.layout.boardSize * 0.04)),
+        height: px(height),
+        lineHeight: px(height + 2),
         color: '#f9f6f2',
         backgroundColor: '#8f7a66',
         borderRadius: px(3),
-        fontSize: px(Math.max(10, this.layout.buttonFont - 1)),
+        fontSize: px(clamp(this.layout.boardSize * 0.036, 10, 18)),
         fontWeight: 'bold',
         textAlign: 'center',
         lines: 1,
@@ -914,6 +903,10 @@ export default {
       this.updateTiles()
     },
     startFreshGame() {
+      // 使仍在排队的旧动画帧回调失效,避免重开局时旧动画链继续驱动新棋盘
+      this.animationToken += 1
+      this.messageToken += 1
+      this.messageOpacity = 1
       this.animationLocked = false
       this.grid = createEmptyGrid()
       this.nextTileId = 1
@@ -937,6 +930,8 @@ export default {
     continueGame(event) {
       this.preventDefault(event)
       this.keepPlaying = true
+      this.messageToken += 1
+      this.messageOpacity = 1
       this.saveGameState()
     },
     toggleSettings() {
@@ -1050,6 +1045,7 @@ export default {
       }
 
       const previousScore = this.score
+      const wasWon = this.won
       const vector = this.getVector(direction)
       const traversals = this.buildTraversals(vector)
       let moved = false
@@ -1111,6 +1107,9 @@ export default {
       if (delta > 0) {
         this.showScoreAddition(delta)
       }
+      if (this.won && !wasWon && !this.keepPlaying) {
+        this.revealMessage()
+      }
 
       this.playMoveAnimation()
       if (!this.pendingGameOver) {
@@ -1128,7 +1127,30 @@ export default {
         popNewAndMerged: false,
         disableMoveTransition: true,
       })
+      this.revealMessage()
       this.saveGameState()
+    },
+    // 原版结束弹层动画: 延迟 1200ms 后用 800ms 淡入。
+    // 用与移动动画相同的定时器逐帧实现,不依赖 CSS transition。
+    revealMessage() {
+      this.messageToken += 1
+      const token = this.messageToken
+      this.messageOpacity = 0
+      this.runAfter(1200, () => {
+        this.fadeMessageFrame(1, token)
+      })
+    },
+    fadeMessageFrame(frame, token) {
+      if (token !== this.messageToken || !this.showMessage) {
+        return
+      }
+      const FADE_FRAME_COUNT = 8
+      this.messageOpacity = Math.min(1, frame / FADE_FRAME_COUNT)
+      if (frame < FADE_FRAME_COUNT) {
+        this.runAfter(100, () => {
+          this.fadeMessageFrame(frame + 1, token)
+        })
+      }
     },
     getVector(direction) {
       const map = {
@@ -1263,6 +1285,8 @@ export default {
       }
     },
     playMoveAnimation() {
+      this.animationToken += 1
+      const token = this.animationToken
       this.animationLocked = true
       this.updateTiles({
         includeMergedGhosts: true,
@@ -1272,12 +1296,15 @@ export default {
       })
 
       this.$nextTick(() => {
-        this.animateMoveFrame(1)
+        this.animateMoveFrame(1, token)
       })
     },
-    animateMoveFrame(frame) {
+    animateMoveFrame(frame, token) {
+      if (token !== this.animationToken) {
+        return
+      }
       if (frame > MOVE_FRAME_COUNT) {
-        this.animatePopFrame(0)
+        this.animatePopFrame(0, token)
         return
       }
 
@@ -1290,10 +1317,13 @@ export default {
       })
 
       this.runAfter(Math.round(MOVE_ANIMATION_MS / MOVE_FRAME_COUNT), () => {
-        this.animateMoveFrame(frame + 1)
+        this.animateMoveFrame(frame + 1, token)
       })
     },
-    animatePopFrame(frame) {
+    animatePopFrame(frame, token) {
+      if (token !== this.animationToken) {
+        return
+      }
       if (frame > POP_FRAME_COUNT) {
         this.updateTiles({
           includeMergedGhosts: false,
@@ -1322,7 +1352,7 @@ export default {
       })
 
       this.runAfter(Math.round(POP_ANIMATION_MS / POP_FRAME_COUNT), () => {
-        this.animatePopFrame(frame + 1)
+        this.animatePopFrame(frame + 1, token)
       })
     },
     easeOut(progress) {
@@ -1350,14 +1380,14 @@ export default {
     },
     showScoreAddition(delta) {
       this.scoreAddition = delta
-      const clear = () => {
-        this.scoreAddition = 0
-      }
-      if (this.$page && this.$page.setTimeout) {
-        this.$page.setTimeout(clear, 650)
-      } else {
-        setTimeout(clear, 650)
-      }
+      this.scoreAdditionToken += 1
+      const token = this.scoreAdditionToken
+      this.runAfter(650, () => {
+        // 连续移动时只允许最后一次定时器清除加分提示
+        if (token === this.scoreAdditionToken) {
+          this.scoreAddition = 0
+        }
+      })
     },
     serializeState() {
       const cells = []
@@ -1427,6 +1457,10 @@ export default {
         return event
       }
       const source = event || {}
+      // 事件对象的 data 字段可能直接是数字(含 0),不能用 || 判断
+      if (typeof source.data === 'number') {
+        return source.data
+      }
       const data = source.data || source.detail || source
       const index = data.index !== undefined ? data.index : data.value
       const parsed = Number(index)
@@ -1550,33 +1584,11 @@ export default {
       }
       return clamp(this.layout.tileSize * 0.52, 12, 55)
     },
-    gridRowStyle(row) {
-      return {
-        position: 'absolute',
-        left: '0px',
-        top: '0px',
-        flexDirection: 'row',
-        width: px(this.layout.boardSize - this.layout.spacing * 2),
-        height: px(this.layout.tileSize),
-        transform: `translate(0px, ${px(row * (this.layout.tileSize + this.layout.spacing))})`,
-        zIndex: 1,
-      }
-    },
-    gridCellStyle(cell) {
-      return {
-        width: px(this.layout.tileSize),
-        height: px(this.layout.tileSize),
-        marginRight: cell === GRID_SIZE - 1 ? '0px' : px(this.layout.spacing),
-        borderRadius: px(Math.max(3, this.layout.tileSize * 0.03)),
-        backgroundColor: '#cdc1b4',
-      }
-    },
   },
 }
 </script>
 
 <style lang="less" scoped>
-.game-page {
-  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
-}
+// 样式均通过 :style 动态计算(随屏幕尺寸自适应),此处无静态样式。
+// 注: font-family 为文本样式且框架不支持字体回退列表/样式继承,故不在此设置。
 </style>

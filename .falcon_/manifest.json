@@ -1,6 +1,6 @@
 {
   "appName": "2048",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "appid": "8001782735702492",
   "icon": "icon.png",
   "quickjs": {
@@ -8,17 +8,17 @@
     "bigNum": false
   },
   "cert": {
-    "app.js": {
-      "size": 5896,
-      "md5": "6701d8451ca0afdff3f0a384fdbb4d8a"
+    "app.js.bin": {
+      "size": 3372,
+      "md5": "d8f48d8a10d3abe647be3bc49b063794"
     },
-    "index.js": {
-      "size": 57931,
-      "md5": "ffb8203c5ec4adb04c530c1214dbc99d"
+    "index.js.bin": {
+      "size": 30443,
+      "md5": "bf4b5d7c1e418c9ce7a8bd9f6d729cb0"
     },
-    "page.js": {
-      "size": 3136,
-      "md5": "6f46ecea7f93fdf7a11bfc502c7b07b9"
+    "page.js.bin": {
+      "size": 2225,
+      "md5": "7f9e893c2691b42f9b3a962533fae08b"
     },
     "images/9f18a4cae52d62389ce354393b5e1b9f.png": {
       "size": 2605,
